@@ -57,14 +57,14 @@ class Lex_Parser
 		// Is this the first time parse() is called?
 		if (Lex_Parser::$data === null)
 		{
-			// Let's store the local data array for later use.
+			// Now let's store the local data array for later use.
 			Lex_Parser::$data = $data;
 		}
 		else
 		{
 			// Let's merge the current data array with the local scope variables
 			// So you can call local variables from within blocks.
-			$data = array_merge(Lex_Parser::$data, $data);
+			$data = $this->mixed_merge(Lex_Parser::$data, $data);
 			
 			// Since this is not the first time parse() is called, it's most definately a callback,
 			// let's store the current callback data with the the local data
@@ -146,6 +146,7 @@ class Lex_Parser
 					$looped_text = '';
 					foreach ($loop_data as $item_data)
 					{
+						$item_data = $this->mixed_merge(Lex_Parser::$data, $item_data);
 						$str = $this->parse_conditionals($match[2][0], $item_data, $callback);
 						$str = $this->parse_variables($str, $item_data, $callback);
 						if ($callback !== null)
@@ -221,11 +222,7 @@ class Lex_Parser
 			$name = $match[1][0];
 			if (isset($match[2]))
 			{
-				$cb_data = $data;
-				if ( !empty(Lex_Parser::$callback_data))
-				{
-					$cb_data = array_merge(Lex_Parser::$callback_data, $data);
-				}
+				$cb_data = $this->mixed_merge(Lex_Parser::$callback_data, $data);
 				$raw_params = $this->inject_extractions($match[2][0], '__cond_str');
 				$parameters = $this->parse_parameters($raw_params, $cb_data, $callback);
 			}
@@ -778,5 +775,35 @@ class Lex_Parser
 		}
 
 		return array();
+	}
+	
+	/**
+	 * 
+	 * Validates the arrays, returns them merged if both are not empty.
+	 * If one of them is empty, it returns the one that's not empty.
+	 * 
+	 * @param array|object $mixed1
+	 * @param array|object $mixed2
+	 */
+	protected function mixed_merge($mixed1, $mixed2)
+	{
+		$array1 = is_array($mixed1) ? $mixed1 : $array1 = (array) $mixed1;
+		$array2 = is_array($mixed1) ? $mixed2 : $array2 = (array) $mixed2;
+		
+		$array1_empty = empty($array1);
+		$array2_empty = empty($array2);
+		
+		// Both arrays are empty.
+		if ($array1_empty && $array2_empty)
+		{
+			return array();
+		}
+		
+		if ($array1_empty)
+		{
+			return $array2;
+		}
+		
+		return array_merge($array1, $array2);
 	}
 }
